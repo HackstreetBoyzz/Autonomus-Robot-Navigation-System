@@ -1,4 +1,5 @@
 Autonomous Robot Navigation System 🤖
+
 📌 Project Overview
 
 This project implements an Autonomous Mobile Robot (TurtleBot) that can navigate its environment intelligently. The robot integrates Arduino C programming, sensors, motor control, and a web-based Bluetooth Low Energy (BLE) controller for manual operation.
@@ -59,6 +60,7 @@ Google Chrome (supports Web Bluetooth API for the controller)
 VS Code / Any Editor (to edit HTML & Arduino code)
 
 🚀 Setup Instructions
+
 1️⃣ Arduino Code
 
 Open final_TurtleBot_code.ino in Arduino IDE.
