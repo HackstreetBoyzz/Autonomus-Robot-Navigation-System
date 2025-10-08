@@ -295,3 +295,264 @@ void handleBTCommand(char c) {
       break;
   }
 }
+
+// motor control code for moving robot with bitwise operators
+void setMotorDirection(MotorPins *motor, Direction dir) {
+  // set direction for motors to move 
+  uint8_t motorControl = 0x00;
+  
+  switch (dir) {
+    case FORWARD:
+      SET_BIT(motorControl, 0); // IN1 = HIGH
+      CLEAR_BIT(motorControl, 1); // IN2 = LOW
+      SET_BIT(motorControl, 2); // IN3 = HIGH
+      CLEAR_BIT(motorControl, 3); // IN4 = LOW
+      
+      digitalWrite(motor->in1, CHECK_BIT(motorControl, 0) ? HIGH : LOW);
+      digitalWrite(motor->in2, CHECK_BIT(motorControl, 1) ? HIGH : LOW);
+      digitalWrite(motor->in3, CHECK_BIT(motorControl, 2) ? HIGH : LOW);
+      digitalWrite(motor->in4, CHECK_BIT(motorControl, 3) ? HIGH : LOW);
+      break;
+      
+    case BACKWARD:
+      CLEAR_BIT(motorControl, 0); // IN1 = LOW
+      SET_BIT(motorControl, 1); // IN2 = HIGH
+      CLEAR_BIT(motorControl, 2); // IN3 = LOW
+      SET_BIT(motorControl, 3); // IN4 = HIGH
+      
+      digitalWrite(motor->in1, CHECK_BIT(motorControl, 0) ? HIGH : LOW);
+      digitalWrite(motor->in2, CHECK_BIT(motorControl, 1) ? HIGH : LOW);
+      digitalWrite(motor->in3, CHECK_BIT(motorControl, 2) ? HIGH : LOW);
+      digitalWrite(motor->in4, CHECK_BIT(motorControl, 3) ? HIGH : LOW);
+      break;
+      
+    case LEFT:
+      SET_BIT(motorControl, 0); // IN1 = HIGH
+      CLEAR_BIT(motorControl, 1); // IN2 = LOW
+      CLEAR_BIT(motorControl, 2); // IN3 = LOW
+      SET_BIT(motorControl, 3); // IN4 = HIGH
+      
+      digitalWrite(motor->in1, CHECK_BIT(motorControl, 0) ? HIGH : LOW);
+      digitalWrite(motor->in2, CHECK_BIT(motorControl, 1) ? HIGH : LOW);
+      digitalWrite(motor->in3, CHECK_BIT(motorControl, 2) ? HIGH : LOW);
+      digitalWrite(motor->in4, CHECK_BIT(motorControl, 3) ? HIGH : LOW);
+      break;
+      
+    case RIGHT:
+      CLEAR_BIT(motorControl, 0); // IN1 = LOW
+      SET_BIT(motorControl, 1); // IN2 = HIGH
+      SET_BIT(motorControl, 2); // IN3 = HIGH
+      CLEAR_BIT(motorControl, 3); // IN4 = LOW
+      
+      digitalWrite(motor->in1, CHECK_BIT(motorControl, 0) ? HIGH : LOW);
+      digitalWrite(motor->in2, CHECK_BIT(motorControl, 1) ? HIGH : LOW);
+      digitalWrite(motor->in3, CHECK_BIT(motorControl, 2) ? HIGH : LOW);
+      digitalWrite(motor->in4, CHECK_BIT(motorControl, 3) ? HIGH : LOW);
+      break;
+      
+    case STOP:
+      stopMotors(motor);
+      return;
+  }
+  
+  analogWrite(motor->ena, motor->speed);
+  analogWrite(motor->enb, motor->speed);
+}
+
+void stopMotors(MotorPins *motor) {
+  digitalWrite(motor->in1, LOW);
+  digitalWrite(motor->in2, LOW);
+  digitalWrite(motor->in3, LOW);
+  digitalWrite(motor->in4, LOW);
+  analogWrite(motor->ena, 0);
+  analogWrite(motor->enb, 0);
+}
+
+// code for distance sensor (ultrasonic) 
+long getDistance(UltrasonicSensor *sensor) {
+  // get distance value from ultrasonic sensor
+  digitalWrite(sensor->trigPin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(sensor->trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(sensor->trigPin, LOW);
+  
+  long duration = pulseIn(sensor->echoPin, HIGH, 25000);
+  long distance = (duration * 0.034) / 2;
+  
+  if (duration == 0 || distance <= 0 || distance > 300) {
+    distance = 300;
+  }
+  
+  sensor->lastDistance = distance;
+  return distance;
+}
+
+// line sensor code for line tracing mode
+uint8_t readLineTrackingSensors(LineTrackingSensors *lt) {
+  lt->sensorState = 0x00; // Clear all bits
+  
+  // Read sensors with simple debouncing
+  uint8_t reading1 = 0x00;
+  uint8_t reading2 = 0x00;
+  
+  // First reading
+  if (digitalRead(lt->leftPin) == HIGH) SET_BIT(reading1, 0);
+  if (digitalRead(lt->middlePin) == HIGH) SET_BIT(reading1, 1);
+  if (digitalRead(lt->rightPin) == HIGH) SET_BIT(reading1, 2);
+  
+  delayMicroseconds(100); // Tiny delay for debounce
+  
+  // Second reading
+  if (digitalRead(lt->leftPin) == HIGH) SET_BIT(reading2, 0);
+  if (digitalRead(lt->middlePin) == HIGH) SET_BIT(reading2, 1);
+  if (digitalRead(lt->rightPin) == HIGH) SET_BIT(reading2, 2);
+  
+  // Only accept reading if both match (debouncing)
+  lt->sensorState = reading1 & reading2;
+  
+  return lt->sensorState;
+}
+
+void runLineTracking(MotorPins *motor, LineTrackingSensors *lt) {
+  uint8_t sensors = readLineTrackingSensors(lt);
+  
+  // Skip processing if state hasn't changed (efficiency optimization)
+  if (sensors == lt->lastState) {
+    return;
+  }
+  lt->lastState = sensors;
+  
+  // Use bitwise operations to check sensor states
+  bool leftDetected = CHECK_BIT(sensors, 0);
+  bool middleDetected = CHECK_BIT(sensors, 1);
+  bool rightDetected = CHECK_BIT(sensors, 2);
+  
+  // Motor control byte for efficient direction setting
+  uint8_t motorControl = 0x00;
+  
+  if (middleDetected) {
+    // On line - move forward at reduced speed
+    SET_BIT(motorControl, 0); // IN1 = HIGH
+    CLEAR_BIT(motorControl, 1); // IN2 = LOW
+    SET_BIT(motorControl, 2); // IN3 = HIGH
+    CLEAR_BIT(motorControl, 3); // IN4 = LOW
+    
+    digitalWrite(motor->in1, HIGH);
+    digitalWrite(motor->in2, LOW);
+    digitalWrite(motor->in3, HIGH);
+    digitalWrite(motor->in4, LOW);
+    analogWrite(motor->ena, lt->lineSpeed); // Use reduced speed
+    analogWrite(motor->enb, lt->lineSpeed);
+    
+    // Throttled BLE message - only send every 2 seconds
+    if (millis() % 2000 < 50) {
+      safeBLEWrite("Line: Following");
+    }
+    
+  } else if (leftDetected && !rightDetected) {
+    // Line to left - turn at reduced speed
+    uint8_t turnSpeed = lt->lineSpeed * 0.8; // Even slower for turns
+    
+    digitalWrite(motor->in1, HIGH);
+    digitalWrite(motor->in2, LOW);
+    digitalWrite(motor->in3, LOW);
+    digitalWrite(motor->in4, HIGH);
+    analogWrite(motor->ena, turnSpeed);
+    analogWrite(motor->enb, turnSpeed);
+    
+    safeBLEWrite("Line: Left");
+    
+  } else if (rightDetected && !leftDetected) {
+    // Line to right - turn at reduced speed
+    uint8_t turnSpeed = lt->lineSpeed * 0.8; // Even slower for turns
+    
+    digitalWrite(motor->in1, LOW);
+    digitalWrite(motor->in2, HIGH);
+    digitalWrite(motor->in3, HIGH);
+    digitalWrite(motor->in4, LOW);
+    analogWrite(motor->ena, turnSpeed);
+    analogWrite(motor->enb, turnSpeed);
+    
+    safeBLEWrite("Line: Right");
+    
+  } else if (sensors == 0x00) {
+    // All sensors LOW (no line detected) - stop
+    stopMotors(motor);
+    safeBLEWrite("Line: Lost");
+    delay(100); // Brief pause when line is lost
+  }
+}
+
+//  OBSTACLE AVOIDANCE 
+void runObstacleAvoidance(MotorPins *motor, UltrasonicSensor *sensor, RobotConfig *cfg) {
+  myservo.write(90);
+  delay(100);
+  
+  long frontDistance = getDistance(sensor);
+  Serial.println(frontDistance);
+  
+  if (frontDistance > cfg->obstacleDistance) {
+    setMotorDirection(motor, FORWARD);
+    if (millis() % 1000 < 100) {
+      safeBLEWrite("Auto: Moving Forward");
+    }
+  } else {
+    stopMotors(motor);
+    safeBLEWrite("Obstacle Detected - Scanning");
+    delay(200);
+    
+    // Scan right
+    myservo.write(30);
+    delay(cfg->scanDelay);
+    long rightDistance = getDistance(sensor);
+    
+    // Scan left
+    myservo.write(150);
+    delay(cfg->scanDelay);
+    long leftDistance = getDistance(sensor);
+    
+    // Return to center
+    myservo.write(90);
+    delay(cfg->scanDelay);
+    
+    // Decision making algo
+    if (rightDistance > cfg->obstacleDistance && leftDistance > cfg->obstacleDistance) {
+      if (rightDistance >= leftDistance) {
+        safeBLEWrite("Auto: Turning Right");
+        setMotorDirection(motor, RIGHT);
+        delay(cfg->turnDelay);
+      } else {
+        safeBLEWrite("Auto: Turning Left");
+        setMotorDirection(motor, LEFT);
+        delay(cfg->turnDelay);
+      }
+    } else if (rightDistance > cfg->obstacleDistance) {
+      safeBLEWrite("Auto: Turning Right");
+      setMotorDirection(motor, RIGHT);
+      delay(cfg->turnDelay);
+    } else if (leftDistance > cfg->obstacleDistance) {
+      safeBLEWrite("Auto: Turning Left");
+      setMotorDirection(motor, LEFT);
+      delay(cfg->turnDelay);
+    } else {
+      safeBLEWrite("Auto: Blocked - Reversing");
+      setMotorDirection(motor, BACKWARD);
+      delay(600);
+      setMotorDirection(motor, RIGHT);
+      delay(800);
+    }
+    
+    stopMotors(motor);
+    delay(100);
+  }
+}
+
+//  BLE HELPER 
+bool safeBLEWrite(const char* message) {
+  if (robotState.isConnected) {
+    txCharacteristic.writeValue(message);
+    return true;
+  }
+  return false;
+}
