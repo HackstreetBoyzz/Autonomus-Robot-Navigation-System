@@ -1,646 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a2e">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>BLE Controller Pro</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            color: white;
-            overflow-x: hidden;
-        }
-
-        /* Header Section */
-        .header {
-            background: rgba(26, 26, 46, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.5s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            text-align: center;
-            background: linear-gradient(90deg, #00d2ff, #928dff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-
-        /* Connection Section */
-        .connection-panel {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin: 1rem;
-            backdrop-filter: blur(10px);
-            animation: fadeIn 0.8s ease-out 0.3s both;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        #connectBtn {
-            width: 100%;
-            padding: 1rem 2rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        #connectBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        #connectBtn:active {
-            transform: translateY(0);
-        }
-
-        #connectBtn.connected {
-            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-        }
-
-        /* Status Display */
-        .status-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 1rem;
-            padding: 0.8rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
-
-        .status-indicator {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.disconnected {
-            background: #ff4757;
-        }
-
-        .status-indicator.connected {
-            background: #00d894;
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 currentColor;
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(0, 216, 148, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 216, 148, 0);
-            }
-        }
-
-        #status {
-            font-size: 0.95rem;
-            color: #e0e0e0;
-        }
-
-        /* Data Display */
-        .data-display {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 0.8rem;
-            margin-top: 0.8rem;
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            color: #00d2ff;
-        }
-
-        /* Controls Container */
-        #controls {
-            flex: 1;
-            display: none;
-            padding: 1rem;
-            animation: slideUp 0.5s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .controls-title {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            font-size: 1.3rem;
-            font-weight: 500;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Function Buttons */
-        .function-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-
-        .function-btn {
-            width: 80px;
-            height: 80px;
-            border: none;
-            border-radius: 20px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            user-select: none;
-            -webkit-user-select: none;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .function-btn:nth-child(1) {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .function-btn:nth-child(2) {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .function-btn:nth-child(3) {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .function-btn:active, .function-btn.pressed {
-            transform: scale(0.92);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-        }
-
-        .function-btn::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .function-btn:active::after {
-            width: 300px;
-            height: 300px;
-        }
-
-        /* Direction Pad */
-        .dpad-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 2rem auto;
-            position: relative;
-            width: 280px;
-            height: 280px;
-        }
-
-        .dpad {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
-        .dpad-btn {
-            position: absolute;
-            border: none;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            user-select: none;
-            -webkit-user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .dpad-btn:active, .dpad-btn.pressed {
-            transform: scale(0.95);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
-
-        .dpad-btn.up {
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 80px;
-            border-radius: 15px 15px 50% 50%;
-        }
-
-        .dpad-btn.down {
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 80px;
-            border-radius: 50% 50% 15px 15px;
-        }
-
-        .dpad-btn.left {
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 80px;
-            height: 80px;
-            border-radius: 15px 50% 50% 15px;
-        }
-
-        .dpad-btn.right {
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 80px;
-            height: 80px;
-            border-radius: 50% 15px 15px 50%;
-        }
-
-        .dpad-center {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60px;
-            height: 60px;
-            background: rgba(26, 26, 46, 0.8);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .dpad-center::after {
-            content: '⊕';
-            font-size: 1.5rem;
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        /* Arrow Icons */
-        .arrow {
-            font-size: 1.8rem;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.5rem;
-            }
-            
-            .function-btn {
-                width: 70px;
-                height: 70px;
-                font-size: 1.3rem;
-            }
-            
-            .dpad-container {
-                width: 240px;
-                height: 240px;
-            }
-            
-            .dpad-btn {
-                width: 70px !important;
-                height: 70px !important;
-            }
-        }
-
-        /* Loading Animation */
-        .connecting::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            margin-left: 10px;
-            border: 2px solid transparent;
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>BLE Controller</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:#667eea;min-height:100vh;display:flex;flex-direction:column;color:#fff}
+.header{background:#1a1a2e;padding:1rem}
+.header h1{font-size:1.5rem;text-align:center}
+.connection-panel{padding:1rem;margin:1rem}
+#connectBtn{width:100%;padding:1rem;font-size:1rem;border:none;border-radius:50px;background:#764ba2;color:#fff;cursor:pointer}
+#connectBtn.connected{background:#3a7bd5}
+.status-container{display:flex;align-items:center;justify-content:center;margin-top:1rem;padding:0.8rem}
+.status-indicator{width:10px;height:10px;border-radius:50%;margin-right:10px}
+.status-indicator.disconnected{background:#ff4757}
+.status-indicator.connected{background:#00d894}
+#status{font-size:0.9rem}
+.data-display{padding:0.8rem;margin-top:0.8rem;min-height:40px;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:0.9rem}
+#controls{flex:1;display:none;padding:1rem}
+.controls-title{text-align:center;margin-bottom:1.5rem;font-size:1.2rem}
+.function-buttons{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+.function-btn{width:80px;height:80px;border:none;border-radius:20px;font-size:1.5rem;font-weight:bold;color:#fff;cursor:pointer;user-select:none}
+.function-btn:nth-child(1){background:#f5576c}
+.function-btn:nth-child(2){background:#00f2fe}
+.function-btn:nth-child(3){background:#38f9d7}
+.function-btn.pressed{transform:scale(0.92)}
+.dpad-container{display:flex;justify-content:center;align-items:center;margin:2rem auto;position:relative;width:280px;height:280px}
+.dpad{position:relative;width:100%;height:100%}
+.dpad-btn{position:absolute;border:none;background:#764ba2;color:#fff;font-weight:bold;font-size:1rem;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:center}
+.dpad-btn.pressed{transform:scale(0.95)}
+.dpad-btn.up{top:0;left:50%;transform:translateX(-50%);width:80px;height:80px;border-radius:15px 15px 50% 50%}
+.dpad-btn.down{bottom:0;left:50%;transform:translateX(-50%);width:80px;height:80px;border-radius:50% 50% 15px 15px}
+.dpad-btn.left{left:0;top:50%;transform:translateY(-50%);width:80px;height:80px;border-radius:15px 50% 50% 15px}
+.dpad-btn.right{right:0;top:50%;transform:translateY(-50%);width:80px;height:80px;border-radius:50% 15px 15px 50%}
+.dpad-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:#1a1a2e;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.arrow{font-size:1.8rem}
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎮 BLE Controller Pro</h1>
-    </div>
-
-    <div class="connection-panel">
-        <button id="connectBtn">Connect to BLE Device</button>
-        <div class="status-container">
-            <div class="status-indicator disconnected" id="statusIndicator"></div>
-            <div id="status">Status: Not connected</div>
-        </div>
-        <div class="data-display" id="data">Waiting for data...</div>
-    </div>
-
-    <div id="controls">
-        <h2 class="controls-title">Control Panel</h2>
-        
-        <div class="function-buttons">
-            <button class="function-btn" data-command="1">1</button>
-            <button class="function-btn" data-command="2">2</button>
-            <button class="function-btn" data-command="3">3</button>
-        </div>
-
-        <div class="dpad-container">
-            <div class="dpad">
-                <button class="dpad-btn up" data-command="F">
-                    <span class="arrow">↑</span>
-                </button>
-                <button class="dpad-btn down" data-command="B">
-                    <span class="arrow">↓</span>
-                </button>
-                <button class="dpad-btn left" data-command="L">
-                    <span class="arrow">←</span>
-                </button>
-                <button class="dpad-btn right" data-command="R">
-                    <span class="arrow">→</span>
-                </button>
-                <div class="dpad-center"></div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const connectBtn = document.getElementById("connectBtn");
-        const statusEl = document.getElementById("status");
-        const statusIndicator = document.getElementById("statusIndicator");
-        const dataEl = document.getElementById("data");
-        const controls = document.getElementById("controls");
-
-        let device, server, service, rxChar, txChar;
-
-        // Nordic UART Service UUIDs
-        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-        const RX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-        const TX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
-
-        // Store active intervals for continuous button press
-        const activeIntervals = new Map();
-        const COMMAND_INTERVAL = 100; // Send command every 100ms while held
-
-        async function connectBLE() {
-            try {
-                connectBtn.disabled = true;
-                connectBtn.classList.add('connecting');
-                statusEl.textContent = "Status: Requesting device...";
-
-                device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [SERVICE_UUID]
-                });
-
-                statusEl.textContent = `Status: Connecting to ${device.name || "Unknown"}`;
-
-                server = await device.gatt.connect();
-                service = await server.getPrimaryService(SERVICE_UUID);
-
-                // RX characteristic (notifications from Arduino)
-                rxChar = await service.getCharacteristic(RX_UUID);
-                rxChar.addEventListener("characteristicvaluechanged", handleNotifications);
-                await rxChar.startNotifications();
-
-                // TX characteristic (write to Arduino)
-                txChar = await service.getCharacteristic(TX_UUID);
-
-                // Update UI for connected state
-                statusEl.textContent = `Status: Connected to ${device.name}`;
-                statusIndicator.classList.remove('disconnected');
-                statusIndicator.classList.add('connected');
-                connectBtn.textContent = "Disconnect";
-                connectBtn.classList.remove('connecting');
-                connectBtn.classList.add('connected');
-                connectBtn.disabled = false;
-                controls.style.display = "block";
-
-                // Set up disconnect handler
-                device.addEventListener('gattserverdisconnected', onDisconnected);
-
-            } catch (error) {
-                console.error(error);
-                statusEl.textContent = "Status: Error – " + error.message;
-                connectBtn.classList.remove('connecting');
-                connectBtn.disabled = false;
-            }
-        }
-
-        function onDisconnected() {
-            statusEl.textContent = "Status: Disconnected";
-            statusIndicator.classList.remove('connected');
-            statusIndicator.classList.add('disconnected');
-            connectBtn.textContent = "Connect to BLE Device";
-            connectBtn.classList.remove('connected');
-            controls.style.display = "none";
-            dataEl.textContent = "Waiting for data...";
-            device = null;
-            server = null;
-            service = null;
-            rxChar = null;
-            txChar = null;
-        }
-
-        function handleNotifications(event) {
-            const value = event.target.value;
-            const decoder = new TextDecoder("utf-8");
-            const text = decoder.decode(value);
-            const timestamp = new Date().toLocaleTimeString();
-            dataEl.textContent = `📥 [${timestamp}] Received: ${text}`;
-        }
-
-        async function sendCommand(cmd) {
-            if (!txChar) {
-                console.log("Not connected to a device!");
-                return;
-            }
-            try {
-                const encoder = new TextEncoder();
-                await txChar.writeValue(encoder.encode(cmd));
-                console.log("Sent:", cmd);
-            } catch (error) {
-                console.error("Error sending command:", error);
-            }
-        }
-
-        function startSending(button, command) {
-            // Clear any existing interval for this button
-            stopSending(button);
-            
-            // Add visual feedback
-            button.classList.add('pressed');
-            
-            // Send command immediately
-            sendCommand(command);
-            
-            // Set up interval to keep sending while held
-            const intervalId = setInterval(() => {
-                sendCommand(command);
-            }, COMMAND_INTERVAL);
-            
-            activeIntervals.set(button, intervalId);
-        }
-
-        function stopSending(button) {
-            // Clear interval if exists
-            if (activeIntervals.has(button)) {
-                clearInterval(activeIntervals.get(button));
-                activeIntervals.delete(button);
-            }
-            
-            // Remove visual feedback
-            button.classList.remove('pressed');
-            
-            // Send stop command
-            sendCommand('S');
-        }
-
-        // Set up event listeners for all control buttons
-        document.querySelectorAll('[data-command]').forEach(button => {
-            const command = button.getAttribute('data-command');
-            
-            // Mouse events
-            button.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                startSending(button, command);
-            });
-            
-            button.addEventListener('mouseup', (e) => {
-                e.preventDefault();
-                stopSending(button);
-            });
-            
-            button.addEventListener('mouseleave', (e) => {
-                e.preventDefault();
-                stopSending(button);
-            });
-            
-            // Touch events
-            button.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startSending(button, command);
-            });
-            
-            button.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                stopSending(button);
-            });
-            
-            button.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                stopSending(button);
-            });
-            
-            // Prevent context menu on long press
-            button.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        });
-
-        // Connect/Disconnect button handler
-        connectBtn.addEventListener("click", async () => {
-            if (device && device.gatt.connected) {
-                // Disconnect
-                device.gatt.disconnect();
-            } else {
-                // Connect
-                await connectBLE();
-            }
-        });
-
-        // Global cleanup on window blur or visibility change
-        window.addEventListener('blur', () => {
-            document.querySelectorAll('[data-command]').forEach(button => {
-                stopSending(button);
-            });
-        });
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                document.querySelectorAll('[data-command]').forEach(button => {
-                    stopSending(button);
-                });
-            }
-        });
-
-        // Prevent zoom on double tap
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) {
-                e.preventDefault();
-            }
-        });
-    </script>
+<div class="header"><h1>BLE Controller</h1></div>
+<div class="connection-panel">
+<button id="connectBtn">Connect to BLE Device</button>
+<div class="status-container">
+<div class="status-indicator disconnected" id="statusIndicator"></div>
+<div id="status">Status: Not connected</div>
+</div>
+<div class="data-display" id="data">Waiting for data...</div>
+</div>
+<div id="controls">
+<h2 class="controls-title">Control Panel</h2>
+<div class="function-buttons">
+<button class="function-btn" data-command="1">1</button>
+<button class="function-btn" data-command="2">2</button>
+<button class="function-btn" data-command="3">3</button>
+</div>
+<div class="dpad-container">
+<div class="dpad">
+<button class="dpad-btn up" data-command="F"><span class="arrow">↑</span></button>
+<button class="dpad-btn down" data-command="B"><span class="arrow">↓</span></button>
+<button class="dpad-btn left" data-command="L"><span class="arrow">←</span></button>
+<button class="dpad-btn right" data-command="R"><span class="arrow">→</span></button>
+<div class="dpad-center"></div>
+</div>
+</div>
+</div>
+<script>
+const connectBtn=document.getElementById("connectBtn");
+const statusEl=document.getElementById("status");
+const statusIndicator=document.getElementById("statusIndicator");
+const dataEl=document.getElementById("data");
+const controls=document.getElementById("controls");
+let device,server,service,rxChar,txChar;
+const SERVICE_UUID="6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const RX_UUID="6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+const TX_UUID="6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+const activeIntervals=new Map();
+const COMMAND_INTERVAL=100;
+async function connectBLE(){
+try{
+connectBtn.disabled=true;
+statusEl.textContent="Status: Requesting device...";
+device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[SERVICE_UUID]});
+statusEl.textContent=`Status: Connecting to ${device.name||"Unknown"}`;
+server=await device.gatt.connect();
+service=await server.getPrimaryService(SERVICE_UUID);
+rxChar=await service.getCharacteristic(RX_UUID);
+rxChar.addEventListener("characteristicvaluechanged",handleNotifications);
+await rxChar.startNotifications();
+txChar=await service.getCharacteristic(TX_UUID);
+statusEl.textContent=`Status: Connected to ${device.name}`;
+statusIndicator.classList.remove('disconnected');
+statusIndicator.classList.add('connected');
+connectBtn.textContent="Disconnect";
+connectBtn.classList.add('connected');
+connectBtn.disabled=false;
+controls.style.display="block";
+device.addEventListener('gattserverdisconnected',onDisconnected);
+}catch(error){
+console.error(error);
+statusEl.textContent="Status: Error – "+error.message;
+connectBtn.disabled=false;
+}
+}
+function onDisconnected(){
+statusEl.textContent="Status: Disconnected";
+statusIndicator.classList.remove('connected');
+statusIndicator.classList.add('disconnected');
+connectBtn.textContent="Connect to BLE Device";
+connectBtn.classList.remove('connected');
+controls.style.display="none";
+dataEl.textContent="Waiting for data...";
+device=null;
+server=null;
+service=null;
+rxChar=null;
+txChar=null;
+}
+function handleNotifications(event){
+const value=event.target.value;
+const decoder=new TextDecoder("utf-8");
+const text=decoder.decode(value);
+const timestamp=new Date().toLocaleTimeString();
+dataEl.textContent=`📥 [${timestamp}] Received: ${text}`;
+}
+async function sendCommand(cmd){
+if(!txChar){console.log("Not connected to a device!");return}
+try{
+const encoder=new TextEncoder();
+await txChar.writeValue(encoder.encode(cmd));
+console.log("Sent:",cmd);
+}catch(error){console.error("Error sending command:",error)}
+}
+function startSending(button,command){
+stopSending(button);
+button.classList.add('pressed');
+sendCommand(command);
+const intervalId=setInterval(()=>{sendCommand(command)},COMMAND_INTERVAL);
+activeIntervals.set(button,intervalId);
+}
+function stopSending(button){
+if(activeIntervals.has(button)){
+clearInterval(activeIntervals.get(button));
+activeIntervals.delete(button);
+}
+button.classList.remove('pressed');
+sendCommand('S');
+}
+document.querySelectorAll('[data-command]').forEach(button=>{
+const command=button.getAttribute('data-command');
+button.addEventListener('mousedown',e=>{e.preventDefault();startSending(button,command)});
+button.addEventListener('mouseup',e=>{e.preventDefault();stopSending(button)});
+button.addEventListener('mouseleave',e=>{e.preventDefault();stopSending(button)});
+button.addEventListener('touchstart',e=>{e.preventDefault();startSending(button,command)});
+button.addEventListener('touchend',e=>{e.preventDefault();stopSending(button)});
+button.addEventListener('touchcancel',e=>{e.preventDefault();stopSending(button)});
+button.addEventListener('contextmenu',e=>{e.preventDefault()});
+});
+connectBtn.addEventListener("click",async()=>{
+if(device&&device.gatt.connected){device.gatt.disconnect()}else{await connectBLE()}
+});
+window.addEventListener('blur',()=>{
+document.querySelectorAll('[data-command]').forEach(button=>{stopSending(button)});
+});
+document.addEventListener('visibilitychange',()=>{
+if(document.hidden){document.querySelectorAll('[data-command]').forEach(button=>{stopSending(button)})}
+});
+document.addEventListener('touchstart',e=>{if(e.touches.length>1){e.preventDefault()}});
+</script>
 </body>
 </html>
